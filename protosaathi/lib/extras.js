@@ -74,8 +74,12 @@ module.exports = function extras(app, { kv }) {
     res.json({ member_id: id, notebook: (await kv.get(`mem:${id}`)) || { state: 'WAITING' } });
   });
   app.post('/memory/save', async (req, res) => {
-    const { member_id, notebook } = req.body || {};
-    if (!member_id || typeof notebook !== 'object') return res.status(400).json({ error: 'member_id and notebook (object) required' });
+    const body = req.body || {};
+    const member_id = body.member_id;
+    let notebook = body.notebook;
+    if (typeof notebook === 'string') { try { notebook = JSON.parse(notebook); } catch (e) { notebook = { note: notebook }; } }
+    if (!notebook || typeof notebook !== 'object') { const { member_id: _m, ...rest } = body; notebook = rest; }
+    if (!member_id) return res.status(400).json({ error: 'member_id required' });
     notebook.updated_at_ist = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
     await kv.set(`mem:${member_id}`, notebook); res.json({ saved: true, notebook });
   });
